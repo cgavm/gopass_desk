@@ -1,10 +1,10 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { CreateTaskInput, UpdateTaskInput } from './tasks.dto';
 
-export class TasksRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export type TasksRepository = ReturnType<typeof createTasksRepository>;
 
-  async findByProject(
+export const createTasksRepository = (prisma: PrismaClient) => ({
+  findByProject: (
     projectId: string,
     filters?: {
       statusId?: string;
@@ -13,16 +13,15 @@ export class TasksRepository {
       tag?: string;
       dueBefore?: string;
     }
-  ) {
+  ) => {
     const where: Prisma.TaskWhereInput = { projectId };
-
     if (filters?.statusId) where.statusId = filters.statusId;
     if (filters?.assigneeId) where.assigneeId = filters.assigneeId;
     if (filters?.priority) where.priority = filters.priority as Prisma.EnumTaskPriorityFilter;
     if (filters?.tag) where.tags = { has: filters.tag };
     if (filters?.dueBefore) where.dueDate = { lte: new Date(filters.dueBefore) };
 
-    return this.prisma.task.findMany({
+    return prisma.task.findMany({
       where,
       include: {
         assignee: { select: { id: true, name: true } },
@@ -33,10 +32,10 @@ export class TasksRepository {
       },
       orderBy: [{ status: { order: 'asc' } }, { order: 'asc' }],
     });
-  }
+  },
 
-  async findById(taskId: string) {
-    return this.prisma.task.findUnique({
+  findById: (taskId: string) =>
+    prisma.task.findUnique({
       where: { id: taskId },
       include: {
         assignee: { select: { id: true, name: true, email: true } },
@@ -45,23 +44,18 @@ export class TasksRepository {
         project: { select: { id: true, name: true, ownerId: true } },
         subtasks: { orderBy: { order: 'asc' } },
         comments: {
-          include: {
-            user: { select: { id: true, name: true } },
-          },
+          include: { user: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'asc' },
         },
         history: {
-          include: {
-            user: { select: { id: true, name: true } },
-          },
+          include: { user: { select: { id: true, name: true } } },
           orderBy: { changedAt: 'desc' },
         },
       },
-    });
-  }
+    }),
 
-  async create(data: CreateTaskInput & { projectId: string; reporterId: string }) {
-    return this.prisma.task.create({
+  create: (data: CreateTaskInput & { projectId: string; reporterId: string }) =>
+    prisma.task.create({
       data: {
         title: data.title,
         description: data.description,
@@ -80,12 +74,10 @@ export class TasksRepository {
         reporter: { select: { id: true, name: true } },
         status: true,
       },
-    });
-  }
+    }),
 
-  async update(taskId: string, data: UpdateTaskInput) {
+  update: (taskId: string, data: UpdateTaskInput) => {
     const updateData: Prisma.TaskUpdateInput = {};
-
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.statusId !== undefined) updateData.status = { connect: { id: data.statusId } };
@@ -99,7 +91,7 @@ export class TasksRepository {
     if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate) : null;
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
 
-    return this.prisma.task.update({
+    return prisma.task.update({
       where: { id: taskId },
       data: updateData,
       include: {
@@ -107,99 +99,61 @@ export class TasksRepository {
         status: true,
       },
     });
-  }
+  },
 
-  async delete(taskId: string) {
-    return this.prisma.task.delete({
-      where: { id: taskId },
-    });
-  }
+  delete: (taskId: string) => prisma.task.delete({ where: { id: taskId } }),
 
-  async move(taskId: string, statusId: string, order: number) {
-    return this.prisma.task.update({
-      where: { id: taskId },
-      data: { statusId, order },
-    });
-  }
+  move: (taskId: string, statusId: string, order: number) =>
+    prisma.task.update({ where: { id: taskId }, data: { statusId, order } }),
 
-  // Task history
-  async createHistory(
+  createHistory: (
     taskId: string,
     userId: string,
     field: string,
     oldValue: string | null,
     newValue: string | null
-  ) {
-    return this.prisma.taskHistory.create({
-      data: {
-        taskId,
-        userId,
-        field,
-        oldValue,
-        newValue,
-      },
-    });
-  }
+  ) =>
+    prisma.taskHistory.create({ data: { taskId, userId, field, oldValue, newValue } }),
 
-  async getHistory(taskId: string) {
-    return this.prisma.taskHistory.findMany({
+  getHistory: (taskId: string) =>
+    prisma.taskHistory.findMany({
       where: { taskId },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
+      include: { user: { select: { id: true, name: true } } },
       orderBy: { changedAt: 'desc' },
-    });
-  }
+    }),
 
-  // Comments
-  async addComment(taskId: string, userId: string, content: string) {
-    return this.prisma.taskComment.create({
+  addComment: (taskId: string, userId: string, content: string) =>
+    prisma.taskComment.create({
       data: { taskId, userId, content },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
-    });
-  }
+      include: { user: { select: { id: true, name: true } } },
+    }),
 
-  async getComments(taskId: string) {
-    return this.prisma.taskComment.findMany({
+  getComments: (taskId: string) =>
+    prisma.taskComment.findMany({
       where: { taskId },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
+      include: { user: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'asc' },
-    });
-  }
+    }),
 
-  // Subtasks
-  async addSubtask(taskId: string, title: string) {
-    const maxOrder = await this.prisma.subtask.aggregate({
+  addSubtask: async (taskId: string, title: string) => {
+    const maxOrder = await prisma.subtask.aggregate({
       where: { taskId },
       _max: { order: true },
     });
-
-    return this.prisma.subtask.create({
-      data: {
-        taskId,
-        title,
-        order: (maxOrder._max.order ?? -1) + 1,
-      },
+    return prisma.subtask.create({
+      data: { taskId, title, order: (maxOrder._max.order ?? -1) + 1 },
     });
-  }
+  },
 
-  async updateSubtask(subtaskId: string, data: { title?: string; isCompleted?: boolean }) {
-    return this.prisma.subtask.update({
+  updateSubtask: (subtaskId: string, data: { title?: string; isCompleted?: boolean }) =>
+    prisma.subtask.update({
       where: { id: subtaskId },
       data: {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.isCompleted !== undefined && { isCompleted: data.isCompleted }),
       },
-    });
-  }
+    }),
 
-  async deleteSubtask(subtaskId: string) {
-    return this.prisma.subtask.delete({
-      where: { id: subtaskId },
-    });
-  }
-}
+  deleteSubtask: (subtaskId: string) =>
+    prisma.subtask.delete({ where: { id: subtaskId } }),
+});
