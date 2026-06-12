@@ -36,25 +36,41 @@ GoPass Desk App is a project management too. It enables teams to:
 
 ## Tech Stack
 
-| Technology | Version
-|------------|---------|---------------|
-| Node.js | 20+
-| TypeScript | 5.4+ 
-| Express | 4.18+ 
-| Prisma | 5.10+ 
-| PostgreSQL | 16 
-| Redis | 7 
-| Socket.IO | 4.7+ 
-| React | 18+ 
-| Vite | 5+ 
-| Tailwind CSS | 3.4+ 
-| shadcn/ui | latest 
-| Zustand | 4+ 
-| Zod | 3.22+ 
-| Jest | 29+ 
-| Google Gemini 1.5 Flash | latest 
+### Backend
+
+![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-3178C6?logo=typescript&logoColor=white)
+![Express](https://img.shields.io/badge/Express-4.18+-000000?logo=express&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-5.10+-2D3748?logo=prisma&logoColor=white)
+
+### Database & Cache
+
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
+
+### Realtime
+
+![Socket.IO](https://img.shields.io/badge/Socket.IO-4.7+-010101?logo=socketdotio&logoColor=white)
+
+### Frontend
+
+![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-5+-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4+-06B6D4?logo=tailwindcss&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-latest-000000)
+![Zustand](https://img.shields.io/badge/Zustand-4+-764ABC)
+
+### Validation & Testing
+
+![Zod](https://img.shields.io/badge/Zod-3.22+-3E67B1)
+![Jest](https://img.shields.io/badge/Jest-29+-C21325?logo=jest&logoColor=white)
+
+### AI
+
+![Google Gemini](https://img.shields.io/badge/Gemini-1.5_Flash-4285F4?logo=google&logoColor=white)
 
 ---
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -92,14 +108,6 @@ flowchart TB
 
     AI --> Gemini
 ```
-
-### Why Layered Architecture instead of NestJS?
-
-- **Simplicity**: NestJS adds ceremony (decorators, modules, providers) that obscures the actual logic
-- **Testability**: Pure functions and explicit dependencies are easier to unit test than NestJS DI container
-- **Flexibility**: No framework lock-in; can swap Express for Fastify with minimal changes
-- **Senior signal**: Shows understanding of architectural patterns without hiding behind a framework
-
 ---
 
 ## Technical Decisions
@@ -138,36 +146,106 @@ Gemini 1.5 Flash offers excellent price/performance for conversational tasks. **
 
 ## Data Model
 
-```
-users (id, email, password_hash, name, role, is_active)
-  |
-  +--< projects (owner_id)
-  |
-  +--< project_members (user_id) >-- projects
-  |
-  +--< tasks (assignee_id)
-  |
-  +--< tasks (reporter_id)
-  |
-  +--< task_comments (user_id)
-  |
-  +--< task_history (user_id)
-  |
-  +--< notifications (user_id)
+### Entity Relationship Diagram
 
-projects
-  |
-  +--< task_statuses (project_id)
-  |
-  +--< tasks (project_id)
+```mermaid
+erDiagram
 
-tasks
-  |
-  +--< subtasks (task_id)
-  |
-  +--< task_comments (task_id)
-  |
-  +--< task_history (task_id)
+    USERS {
+        uuid id PK
+        string email
+        string password_hash
+        string name
+        string role
+        boolean is_active
+        timestamp created_at
+    }
+
+    PROJECTS {
+        uuid id PK
+        string name
+        text description
+        uuid owner_id FK
+        timestamp created_at
+    }
+
+    PROJECT_MEMBERS {
+        uuid project_id FK
+        uuid user_id FK
+        timestamp joined_at
+    }
+
+    TASK_STATUSES {
+        uuid id PK
+        uuid project_id FK
+        string name
+        string color
+    }
+
+    TASKS {
+        uuid id PK
+        uuid project_id FK
+        uuid status_id FK
+        uuid assignee_id FK
+        uuid reporter_id FK
+        string title
+        text description
+        string priority
+        timestamp due_date
+        timestamp created_at
+    }
+
+    SUBTASKS {
+        uuid id PK
+        uuid task_id FK
+        string title
+        boolean completed
+    }
+
+    TASK_COMMENTS {
+        uuid id PK
+        uuid task_id FK
+        uuid user_id FK
+        text content
+        timestamp created_at
+    }
+
+    TASK_HISTORY {
+        uuid id PK
+        uuid task_id FK
+        uuid user_id FK
+        string action
+        timestamp created_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid user_id FK
+        string type
+        boolean read
+        timestamp created_at
+    }
+
+    USERS ||--o{ PROJECTS : owns
+    USERS ||--o{ PROJECT_MEMBERS : joins
+    PROJECTS ||--o{ PROJECT_MEMBERS : contains
+
+    PROJECTS ||--o{ TASK_STATUSES : defines
+    PROJECTS ||--o{ TASKS : contains
+
+    TASK_STATUSES ||--o{ TASKS : categorizes
+
+    USERS ||--o{ TASKS : assigned_to
+    USERS ||--o{ TASKS : reports
+
+    TASKS ||--o{ SUBTASKS : contains
+    TASKS ||--o{ TASK_COMMENTS : has
+    TASKS ||--o{ TASK_HISTORY : tracks
+
+    USERS ||--o{ TASK_COMMENTS : writes
+    USERS ||--o{ TASK_HISTORY : performs
+
+    USERS ||--o{ NOTIFICATIONS : receives
 ```
 
 ---
