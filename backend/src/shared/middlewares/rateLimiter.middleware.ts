@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { redis } from '@infrastructure/cache/redis.client';
 import { AppError } from '../errors/AppError';
+import { asyncHandler } from './asyncHandler.middleware';
 
 interface RateLimitOptions {
   windowMs: number;
@@ -16,8 +17,9 @@ function getClientIp(req: Request): string {
   return req.ip ?? 'unknown';
 }
 
-export function rateLimiter(options: RateLimitOptions) {
-  return async (
+export function rateLimiter(options: RateLimitOptions): RequestHandler {
+  return asyncHandler(async (
+
     req: Request,
     _res: Response,
     next: NextFunction
@@ -47,7 +49,7 @@ export function rateLimiter(options: RateLimitOptions) {
       // If Redis fails, allow request through
       next();
     }
-  };
+  });
 }
 
 // Pre-configured limiters

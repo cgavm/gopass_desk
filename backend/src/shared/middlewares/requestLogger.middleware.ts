@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '@infrastructure/cache/redis.client';
+import { logger } from '@shared/logger';
 
-export function requestLogger(
+export const requestLogger = (
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): void => {
   const start = Date.now();
 
   res.on('finish', () => {
@@ -16,10 +16,11 @@ export function requestLogger(
         path: req.path,
         statusCode: res.statusCode,
         duration: `${duration}ms`,
+        userId: req.user?.id,
       },
       `${req.method} ${req.path} ${res.statusCode}`
     );
   });
 
   next();
-}
+};

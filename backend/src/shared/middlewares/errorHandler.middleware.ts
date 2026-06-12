@@ -1,16 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../errors/AppError';
-import { logger } from '@infrastructure/cache/redis.client';
+import { logger } from '@shared/logger';
 
-export function errorHandler(
+export const errorHandler = (
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
-): void {
+): void => {
   if (err instanceof AppError) {
     if (!err.isOperational) {
-      logger.error({ err }, 'Non-operational error');
+      logger.error({ err, path: req.path, method: req.method }, 'Non-operational error');
     }
     res.status(err.statusCode).json({
       error: err.name.replace('Error', ''),
@@ -20,8 +20,7 @@ export function errorHandler(
     return;
   }
 
-  // Unexpected error
-  logger.error({ err }, 'Unhandled error');
+  logger.error({ err, path: req.path, method: req.method }, 'Unhandled error');
   res.status(500).json({
     error: 'InternalServerError',
     message:
@@ -30,12 +29,12 @@ export function errorHandler(
         : err.message,
     statusCode: 500,
   });
-}
+};
 
-export function notFoundHandler(
-  _req: Request,
+export const notFoundHandler = (
+  req: Request,
   _res: Response,
   next: NextFunction
-): void {
-  next(new AppError('Resource not found', 404));
-}
+): void => {
+  next(new AppError(`Resource not found: ${req.path}`, 404));
+};
