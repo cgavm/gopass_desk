@@ -1,47 +1,45 @@
+import { logger } from '@shared/logger';
 import { StatusesRepository } from './statuses.repository';
 import { CreateStatusInput, UpdateStatusInput, ReorderStatusesInput } from './statuses.dto';
-import { ForbiddenError, NotFoundError, BadRequestError } from '@shared/errors/AppError';
+import { NotFoundError, BadRequestError } from '@shared/errors/AppError';
 
-export class StatusesService {
-  constructor(private readonly repository: StatusesRepository) {}
+export type StatusesService = ReturnType<typeof createStatusesService>;
 
-  async findByProject(projectId: string) {
-    return this.repository.findByProject(projectId);
-  }
+export const createStatusesService = (repository: StatusesRepository) => ({
+  findByProject: (projectId: string) => repository.findByProject(projectId),
 
-  async create(projectId: string, input: CreateStatusInput) {
-    return this.repository.create(projectId, input);
-  }
+  create: async (projectId: string, input: CreateStatusInput) => {
+    const status = await repository.create(projectId, input);
+    logger.info({ projectId, statusId: status.id }, 'Status created');
+    return status;
+  },
 
-  async update(
-    projectId: string,
-    statusId: string,
-    input: UpdateStatusInput
-  ) {
-    const status = await this.repository.findById(statusId);
+  update: async (projectId: string, statusId: string, input: UpdateStatusInput) => {
+    const status = await repository.findById(statusId);
     if (!status || status.projectId !== projectId) {
       throw new NotFoundError('Status not found in this project');
     }
-    return this.repository.update(statusId, input);
-  }
+    const updated = await repository.update(statusId, input);
+    logger.info({ projectId, statusId }, 'Status updated');
+    return updated;
+  },
 
-  async delete(projectId: string, statusId: string) {
-    const status = await this.repository.findById(statusId);
+  delete: async (projectId: string, statusId: string) => {
+    const status = await repository.findById(statusId);
     if (!status || status.projectId !== projectId) {
       throw new NotFoundError('Status not found in this project');
     }
-
-    const taskCount = await this.repository.countTasksUsingStatus(statusId);
+    const taskCount = await repository.countTasksUsingStatus(statusId);
     if (taskCount > 0) {
-      throw new BadRequestError(
-        'Cannot delete status with tasks. Move or delete tasks first.'
-      );
+      logger.warn({ statusId, taskCount }, 'Delete blocked: status has tasks');
+      throw new BadRequestError('Cannot delete status with tasks. Move or delete tasks first.');
     }
+    await repository.delete(statusId);
+    logger.info({ projectId, statusId }, 'Status deleted');
+  },
 
-    return this.repository.delete(statusId);
-  }
-
-  async reorder(projectId: string, input: ReorderStatusesInput) {
-    await this.repository.reorder(projectId, input.statusIds);
-  }
-}
+  reorder: async (projectId: string, input: ReorderStatusesInput) => {
+    await repository.reorder(projectId, input.statusIds);
+    logger.info({ projectId, count: input.statusIds.length }, 'Statuses reordered');
+  },
+});
