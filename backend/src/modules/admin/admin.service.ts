@@ -1,9 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import { logger } from '@shared/logger';
 
-export class AdminService {
-  constructor(private readonly prisma: PrismaClient) {}
+export type AdminService = ReturnType<typeof createAdminService>;
 
-  async getStats() {
+export const createAdminService = (prisma: PrismaClient) => ({
+  getStats: async () => {
     const [
       totalProjects,
       totalTasks,
@@ -13,20 +14,13 @@ export class AdminService {
       overdueTasks,
       recentProjects,
     ] = await Promise.all([
-      this.prisma.project.count(),
-      this.prisma.task.count(),
-      this.prisma.user.count(),
-      this.prisma.user.count({ where: { isActive: true } }),
-      this.prisma.task.groupBy({
-        by: ['priority'],
-        _count: true,
-      }),
-      this.prisma.task.count({
-        where: {
-          dueDate: { lt: new Date() },
-        },
-      }),
-      this.prisma.project.findMany({
+      prisma.project.count(),
+      prisma.task.count(),
+      prisma.user.count(),
+      prisma.user.count({ where: { isActive: true } }),
+      prisma.task.groupBy({ by: ['priority'], _count: true }),
+      prisma.task.count({ where: { dueDate: { lt: new Date() } } }),
+      prisma.project.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {
@@ -39,6 +33,8 @@ export class AdminService {
       }),
     ]);
 
+    logger.info({ totalProjects, totalTasks, totalUsers }, 'Admin stats queried');
+
     return {
       totalProjects,
       totalTasks,
@@ -48,5 +44,5 @@ export class AdminService {
       overdueTasks,
       recentProjects,
     };
-  }
-}
+  },
+});
