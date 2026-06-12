@@ -29,7 +29,7 @@ import { AIMessage, AIResponse } from './ai.port';
 // ---------------------------------------------------------------------------
 
 function buildSystemInstruction(): string {
-  return `Eres un asistente de gestión de tareas para la aplicación gopass_desk.
+  return `Eres un asistente de gestión de tareas para la aplicación GoPass Desk App.
 
 Tu único propósito es responder preguntas sobre las TAREAS ASIGNADAS al usuario que está preguntando.
 Nunca accedes ni mencionas datos de otros usuarios.
