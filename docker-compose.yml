@@ -47,7 +47,7 @@ services:
       - SEED_ADMIN_EMAIL=admin@gopass.desk
       - SEED_ADMIN_PASSWORD=MySecurePassword123!
       - SEED_ADMIN_NAME=System Administrator
-      - GEMINI_API_KEY=AIzaSyAvPj3bBosYt-KauElwyU9SaAwxdPcpSZU
+      - GEMINI_API_KEY=example-api-key
     ports:
       - "3001:3001"
     volumes:
