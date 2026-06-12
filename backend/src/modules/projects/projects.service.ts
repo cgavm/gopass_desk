@@ -35,19 +35,11 @@ export const createProjectsService = (repository: ProjectsRepository) => ({
 
   findById: async (
     id: string,
-    userId: string,
-    userRole: UserRole
+    _userId: string,
+    _userRole: UserRole
   ): Promise<ProjectWithRelations> => {
     const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
-
-    const isOwner = project.ownerId === userId;
-    const isMember = project.members.some((m) => m.userId === userId);
-
-    if (userRole !== 'ADMIN' && !isOwner && !isMember) {
-      logger.warn({ projectId: id, userId }, 'Access denied to project');
-      throw new ForbiddenError('Access denied to this project');
-    }
 
     return project;
   },
@@ -148,15 +140,9 @@ export const createProjectsService = (repository: ProjectsRepository) => ({
     logger.info({ projectId: id, targetUserId: memberUserId }, 'Member removed from project');
   },
 
-  getStats: async (id: string, userId: string, userRole: UserRole) => {
+  getStats: async (id: string, _userId: string, _userRole: UserRole) => {
     const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
-
-    const isMember = project.members.some((m) => m.userId === userId);
-    if (userRole !== 'ADMIN' && project.ownerId !== userId && !isMember) {
-      logger.warn({ projectId: id, userId }, 'Access denied to project stats');
-      throw new ForbiddenError('Access denied');
-    }
 
     return repository.getTaskStats(id);
   },

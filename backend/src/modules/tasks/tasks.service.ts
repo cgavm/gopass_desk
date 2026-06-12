@@ -50,8 +50,8 @@ export const createTasksService = (
 ) => ({
   findByProject: async (
     projectId: string,
-    userId: string,
-    userRole: UserRole,
+    _userId: string,
+    _userRole: UserRole,
     filters?: {
       statusId?: string;
       assigneeId?: string;
@@ -60,35 +60,12 @@ export const createTasksService = (
       dueBefore?: string;
     }
   ) => {
-    if (userRole !== 'ADMIN') {
-      const isMember = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId, userId } },
-      });
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-        select: { ownerId: true },
-      });
-      if (!isMember && project?.ownerId !== userId) {
-        logger.warn({ projectId, userId }, 'Access denied to project tasks');
-        throw new ForbiddenError('Access denied to this project');
-      }
-    }
     return repository.findByProject(projectId, filters);
   },
 
-  findById: async (taskId: string, userId: string, userRole: UserRole) => {
+  findById: async (taskId: string, _userId: string, _userRole: UserRole) => {
     const task = await repository.findById(taskId);
     if (!task) throw new NotFoundError('Task not found');
-
-    if (userRole !== 'ADMIN') {
-      const isMember = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: task.projectId, userId } },
-      });
-      if (!isMember && task.project.ownerId !== userId) {
-        logger.warn({ taskId, userId }, 'Access denied to task');
-        throw new ForbiddenError('Access denied');
-      }
-    }
 
     return task;
   },
@@ -96,23 +73,9 @@ export const createTasksService = (
   create: async (
     projectId: string,
     reporterId: string,
-    userRole: UserRole,
+    _userRole: UserRole,
     input: CreateTaskInput
   ) => {
-    if (userRole !== 'ADMIN') {
-      const isMember = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId, userId: reporterId } },
-      });
-      const project = await prisma.project.findUnique({
-        where: { id: projectId },
-        select: { ownerId: true },
-      });
-      if (!isMember && project?.ownerId !== reporterId) {
-        logger.warn({ projectId, userId: reporterId }, 'Unauthorized task creation attempt');
-        throw new ForbiddenError('Access denied to this project');
-      }
-    }
-
     const task = await repository.create({ ...input, projectId, reporterId });
 
     await repository.createHistory(task.id, reporterId, 'task', null, 'created');
@@ -230,21 +193,11 @@ export const createTasksService = (
   move: async (
     taskId: string,
     userId: string,
-    userRole: UserRole,
+    _userRole: UserRole,
     input: MoveTaskInput
   ) => {
     const existing = await repository.findById(taskId);
     if (!existing) throw new NotFoundError('Task not found');
-
-    if (userRole !== 'ADMIN') {
-      const isMember = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: existing.projectId, userId } },
-      });
-      if (!isMember && existing.project.ownerId !== userId) {
-        logger.warn({ taskId, userId }, 'Unauthorized task move attempt');
-        throw new ForbiddenError('Access denied');
-      }
-    }
 
     const fromStatusId = existing.statusId;
     await repository.move(taskId, input.statusId, input.order);

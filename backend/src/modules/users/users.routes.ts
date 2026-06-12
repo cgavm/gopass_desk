@@ -15,12 +15,12 @@ const controller = createUsersController(service);
 
 const router = Router();
 
-router.use(authenticate, authorize('ADMIN'));
+router.use(authenticate);
 
 router.get('/', asyncHandler(controller.findAll));
-router.post('/', validate(createUserSchema), asyncHandler(controller.create));
+router.post('/', authorize('ADMIN'), validate(createUserSchema), asyncHandler(controller.create));
 router.get('/:id', asyncHandler(controller.findById));
-router.patch('/:id', validate(updateUserSchema), asyncHandler(controller.update));
-router.delete('/:id', asyncHandler(controller.deactivate));
+router.patch('/:id', authorize('ADMIN'), validate(updateUserSchema), asyncHandler(controller.update));
+router.delete('/:id', authorize('ADMIN'), asyncHandler(controller.deactivate));
 
 export { router as usersRoutes };
