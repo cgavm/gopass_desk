@@ -2,8 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '@prisma/client';
 import { prisma } from '@infrastructure/database/prisma.client';
-import { redis, blacklistToken, isTokenBlacklisted } from '@infrastructure/cache/redis.client';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '@shared/errors/AppError';
+import { blacklistToken, isTokenBlacklisted } from '@infrastructure/cache/redis.client';
+import { logger } from '@shared/logger';
+import { UnauthorizedError, ForbiddenError } from '@shared/errors/AppError';
 import { LoginInput } from './auth.dto';
 
 const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? '';
@@ -24,16 +25,16 @@ interface TokenPair {
   refreshToken: string;
 }
 
-function generateTokens(user: {
+const generateTokens = (user: {
   id: string;
   email: string;
   name: string;
   role: UserRole;
-}): TokenPair {
+}): TokenPair => {
   const jtiAccess = crypto.randomUUID();
   const jtiRefresh = crypto.randomUUID();
 
-  const accessToken = (jwt as any).sign(
+  const accessToken = jwt.sign(
     {
       sub: user.id,
       email: user.email,
@@ -41,42 +42,44 @@ function generateTokens(user: {
       role: user.role,
       jti: jtiAccess,
     } as TokenPayload,
-    JWT_ACCESS_SECRET as unknown as jwt.Secret,
-    { expiresIn: ACCESS_EXPIRES_IN }
+    JWT_ACCESS_SECRET as jwt.Secret,
+    { expiresIn: ACCESS_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
   );
 
-  const refreshToken = (jwt as any).sign(
+  const refreshToken = jwt.sign(
     { sub: user.id, jti: jtiRefresh } as Pick<TokenPayload, 'sub' | 'jti'>,
-    JWT_REFRESH_SECRET as unknown as jwt.Secret,
-    { expiresIn: REFRESH_EXPIRES_IN }
+    JWT_REFRESH_SECRET as jwt.Secret,
+    { expiresIn: REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] }
   );
 
   return { accessToken, refreshToken };
-}
+};
 
-export async function login(input: LoginInput): Promise<TokenPair> {
-  const user = await prisma.user.findUnique({
-    where: { email: input.email },
-  });
+export const login = async (input: LoginInput): Promise<TokenPair> => {
+  const user = await prisma.user.findUnique({ where: { email: input.email } });
 
   if (!user) {
+    logger.warn({ email: input.email }, 'Login attempt for unknown email');
     throw new UnauthorizedError('Invalid credentials');
   }
 
   if (!user.isActive) {
+    logger.warn({ userId: user.id }, 'Login attempt on deactivated account');
     throw new ForbiddenError('Account is deactivated');
   }
 
   const validPassword = await bcrypt.compare(input.password, user.passwordHash);
 
   if (!validPassword) {
+    logger.warn({ userId: user.id }, 'Login attempt with invalid password');
     throw new UnauthorizedError('Invalid credentials');
   }
 
+  logger.info({ userId: user.id, role: user.role }, 'User logged in');
   return generateTokens(user);
-}
+};
 
-export async function refresh(refreshToken: string): Promise<TokenPair> {
+export const refresh = async (refreshToken: string): Promise<TokenPair> => {
   let decoded: { sub: string; jti: string; exp: number };
 
   try {
@@ -91,42 +94,43 @@ export async function refresh(refreshToken: string): Promise<TokenPair> {
 
   const blacklisted = await isTokenBlacklisted(decoded.jti);
   if (blacklisted) {
+    logger.warn({ userId: decoded.sub }, 'Refresh token already revoked');
     throw new UnauthorizedError('Refresh token revoked');
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: decoded.sub },
-  });
+  const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
 
   if (!user || !user.isActive) {
     throw new UnauthorizedError('User not found or deactivated');
   }
 
-  // Blacklist old refresh token
   const ttl = Math.max(0, decoded.exp - Math.floor(Date.now() / 1000));
   if (ttl > 0) {
     await blacklistToken(decoded.jti, ttl);
   }
 
+  logger.info({ userId: user.id }, 'Token refreshed');
   return generateTokens(user);
-}
+};
 
-export async function logout(refreshToken: string): Promise<void> {
+export const logout = async (refreshToken: string): Promise<void> => {
   try {
     const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as {
       jti: string;
       exp: number;
+      sub: string;
     };
     const ttl = Math.max(0, decoded.exp - Math.floor(Date.now() / 1000));
     if (ttl > 0) {
       await blacklistToken(decoded.jti, ttl);
     }
+    logger.info({ userId: decoded.sub }, 'User logged out');
   } catch {
-    // Token invalid or expired — already "logged out"
+    // Token invalid or expired — already effectively logged out
   }
-}
+};
 
-export async function getMe(userId: string) {
+export const getMe = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -144,4 +148,4 @@ export async function getMe(userId: string) {
   }
 
   return user;
-}
+};
