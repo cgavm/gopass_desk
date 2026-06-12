@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TaskStatus, TaskPriority, ProjectMember } from '@/types';
+import { TaskStatus, TaskPriority, User } from '@/types';
 import { tasksApi } from '@/api/tasks.api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 interface TaskFormProps {
   projectId: string;
   statuses: TaskStatus[];
-  members: ProjectMember[];
+  users: User[];
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -34,7 +34,7 @@ const NO_ASSIGNEE = '__none__';
 export function TaskForm({
   projectId,
   statuses,
-  members,
+  users,
   open,
   onClose,
   onSuccess,
@@ -155,9 +155,9 @@ export function TaskForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={NO_ASSIGNEE}>Unassigned</SelectItem>
-                {members.map((m) => (
-                  <SelectItem key={m.userId} value={m.userId}>
-                    {m.user.name}
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
                   </SelectItem>
                 ))}
               </SelectContent>

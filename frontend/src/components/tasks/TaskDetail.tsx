@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Task, TaskStatus, ProjectMember, TaskPriority } from '@/types';
+import { Task, TaskStatus, User, TaskPriority } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import { tasksApi } from '@/api/tasks.api';
 import {
@@ -37,7 +37,7 @@ import { CommentList } from './CommentList';
 import { TaskHistory } from './TaskHistory';
 import { format } from 'date-fns';
 import {
-  User,
+  User as UserIcon,
   Flag,
   Calendar,
   Tag,
@@ -57,7 +57,7 @@ interface TaskDetailProps {
   open: boolean;
   onClose: () => void;
   statuses: TaskStatus[];
-  members: ProjectMember[];
+  users: User[];
   onTaskDeleted?: () => void;
   onTaskUpdated?: () => void;
 }
@@ -76,7 +76,7 @@ export function TaskDetail({
   open,
   onClose,
   statuses,
-  members,
+  users,
   onTaskDeleted,
   onTaskUpdated,
 }: TaskDetailProps) {
@@ -421,7 +421,7 @@ export function TaskDetail({
                   {/* Issue #2: Editable assignee */}
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                      <User className="h-3.5 w-3.5" />
+                      <UserIcon className="h-3.5 w-3.5" />
                       Assignee
                     </label>
                     <Select
@@ -434,9 +434,9 @@ export function TaskDetail({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={NO_ASSIGNEE}>Unassigned</SelectItem>
-                        {members.map((m) => (
-                          <SelectItem key={m.userId} value={m.userId}>
-                            {m.user.name}
+                        {users.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -446,7 +446,7 @@ export function TaskDetail({
                   {/* Reporter */}
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                      <User className="h-3.5 w-3.5" />
+                      <UserIcon className="h-3.5 w-3.5" />
                       Reporter
                     </label>
                     <span className="text-sm">{task.reporter.name}</span>

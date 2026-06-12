@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { projectsApi } from '@/api/projects.api';
-import { Project, Task } from '@/types';
+import { api } from '@/api/client';
+import { Project, Task, User } from '@/types';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { TaskDetail } from '@/components/tasks/TaskDetail';
 import { TaskForm } from '@/components/tasks/TaskForm';
@@ -33,6 +34,7 @@ export function KanbanPage() {
   const [loading, setLoading] = useState(true);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
   const [filters, setFilters] = useState<Record<string, string | undefined>>({});
+  const [users, setUsers] = useState<User[]>([]);
 
   // Issue #5: Support opening task via URL param ?task=<id>
   const selectedTaskId = searchParams.get('task');
@@ -70,10 +72,17 @@ export function KanbanPage() {
       });
   }, [id, filters]);
 
+  const fetchUsers = useCallback(() => {
+    api.get('/users').then((res) => {
+      setUsers((res.data.data ?? []).filter((u: User) => u.isActive));
+    }).catch(console.error);
+  }, []);
+
   useEffect(() => {
     fetchProject();
     fetchTasks();
-  }, [fetchProject, fetchTasks]);
+    fetchUsers();
+  }, [fetchProject, fetchTasks, fetchUsers]);
 
   const uniqueAssignees = Array.from(
     new Set(
@@ -192,22 +201,22 @@ export function KanbanPage() {
         onTasksChange={fetchTasks}
       />
 
-      {/* Issue #4: Task Detail as centered Dialog — pass members for assignee selector */}
+      {/* Task Detail as centered Dialog — pass users for assignee selector */}
       <TaskDetail
         taskId={selectedTaskId}
         open={!!selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
         statuses={project.statuses}
-        members={project.members}
+        users={users}
         onTaskDeleted={fetchTasks}
         onTaskUpdated={fetchTasks}
       />
 
-      {/* Issue #2: Task Form with members for assignee selection */}
+      {/* Task Form with users for assignee selection */}
       <TaskForm
         projectId={project.id}
         statuses={project.statuses}
-        members={project.members}
+        users={users}
         open={taskFormOpen}
         onClose={() => setTaskFormOpen(false)}
         onSuccess={fetchTasks}
