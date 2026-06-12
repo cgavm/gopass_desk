@@ -394,6 +394,7 @@ docker-compose up -d
 # Run all tests with coverage
 cd backend
 npm test
+```
 
 
 ### Coverage
@@ -403,7 +404,6 @@ npm test
 | projects.service | Owner assignment, forbidden access, member deduplication |
 | tasks.service | History creation, task move, authorization, notifications |
 | users.service | Duplicate email, soft delete |
-```
 ---
 
 ## CI/CD
