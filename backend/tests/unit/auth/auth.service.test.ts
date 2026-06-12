@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import * as authService from '@modules/auth/auth.service';
 import { prisma } from '@infrastructure/database/prisma.client';
@@ -21,16 +21,14 @@ jest.mock('jsonwebtoken', () => ({
 }));
 
 // Mock bcrypt
-jest.mock('bcrypt', () => ({
+jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
 }));
 
-const mockedPrisma = prisma as unknown as {
-  user: { findUnique: jest.Mock };
-};
-const mockedJwtVerify = jwt.verify as jest.Mock;
-const mockedBcryptCompare = bcrypt.compare as jest.Mock;
-const mockedIsTokenBlacklisted = isTokenBlacklisted as jest.Mock;
+const mockedPrisma = prisma as any;
+const mockedJwtVerify = jwt.verify as any;
+const mockedBcryptCompare = bcrypt.compare as any;
+const mockedIsTokenBlacklisted = isTokenBlacklisted as any;
 
 process.env.JWT_ACCESS_SECRET = 'test-access-secret';
 process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
