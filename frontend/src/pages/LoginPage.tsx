@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, FolderKanban } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import gopassLogo from '@/assets/gopass.jpg';
 
 export function LoginPage() {
   const { login, isAuthenticated } = useAuthStore();
@@ -34,8 +35,8 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-            <FolderKanban className="h-6 w-6 text-primary-foreground" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg overflow-hidden">
+            <img src={gopassLogo} alt="GoPass Logo" className="h-full w-full object-cover" />
           </div>
           <CardTitle className="text-2xl">GoPass Desk App</CardTitle>
           <CardDescription>
