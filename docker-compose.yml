@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gopass
+      POSTGRES_PASSWORD: gopass123
+      POSTGRES_DB: gopass_desk
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gopass -d gopass_desk"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6382:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://gopass:gopass123@postgres:5432/gopass_desk
+      - REDIS_URL=redis://redis:6379
+      - JWT_ACCESS_SECRET=019eb6f6-4354-75b2-b3a7-f341e830b835
+      - JWT_REFRESH_SECRET=019ebcce-9754-734e-81f6-c61dd8641f6c
+      - JWT_ACCESS_EXPIRES_IN=15m
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - PORT=3001
+      - NODE_ENV=development
+      - ALLOWED_ORIGINS=http://localhost:5173
+      - SEED_ADMIN_EMAIL=admin@gopass.desk
+      - SEED_ADMIN_PASSWORD=MySecurePassword123!
+      - SEED_ADMIN_NAME=System Administrator
+      - GEMINI_API_KEY=AIzaSyAvPj3bBosYt-KauElwyU9SaAwxdPcpSZU
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+    command: >
+      sh -c "npm run db:deploy && npm run db:seed && npm run build && node dist/server.js"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001/api/v1
+      - VITE_SOCKET_URL=http://localhost:3001
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  pgdata:
