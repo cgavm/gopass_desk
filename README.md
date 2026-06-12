@@ -205,7 +205,7 @@ docker-compose up -d
 > Also, Redis is mapped to host port `6382` to avoid conflicts with any local Redis instance already using `6379`.
 
 # Backend API: http://localhost:3001
-# Default login: admin@gopass.desk / Admin123!
+# Default login: admin@gopass.desk / MySecurePassword123!
 ```
 
 ---

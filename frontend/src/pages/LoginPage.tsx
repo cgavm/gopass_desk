@@ -74,7 +74,7 @@ export function LoginPage() {
             </Button>
           </form>
           <p className="mt-4 text-center text-xs text-muted-foreground">
-            Default: admin@gopass.desk / Admin123!
+            Default: admin@gopass.desk / MySecurePassword123!
           </p>
         </CardContent>
       </Card>

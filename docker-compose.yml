@@ -45,7 +45,7 @@ services:
       - NODE_ENV=development
       - ALLOWED_ORIGINS=http://localhost:5173
       - SEED_ADMIN_EMAIL=admin@gopass.desk
-      - SEED_ADMIN_PASSWORD=Admin123!
+      - SEED_ADMIN_PASSWORD=MySecurePassword123!
       - SEED_ADMIN_NAME=System Administrator
       - GEMINI_API_KEY=AIzaSyAvPj3bBosYt-KauElwyU9SaAwxdPcpSZU
     ports:
