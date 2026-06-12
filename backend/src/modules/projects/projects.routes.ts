@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { ProjectsController } from './projects.controller';
-import { ProjectsService } from './projects.service';
-import { ProjectsRepository } from './projects.repository';
+import { createProjectsController } from './projects.controller';
+import { createProjectsService } from './projects.service';
+import { createProjectsRepository } from './projects.repository';
 import { validate } from '@shared/validators/validate';
 import { authenticate } from '@shared/middlewares/authenticate.middleware';
 import { authorize } from '@shared/middlewares/authorize.middleware';
+import { asyncHandler } from '@shared/middlewares/asyncHandler.middleware';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -12,21 +13,21 @@ import {
 } from './projects.dto';
 import { prisma } from '@infrastructure/database/prisma.client';
 
-const repository = new ProjectsRepository(prisma);
-const service = new ProjectsService(repository);
-const controller = new ProjectsController(service);
+const repository = createProjectsRepository(prisma);
+const service = createProjectsService(repository);
+const controller = createProjectsController(service);
 
 const router = Router();
 
 router.use(authenticate);
 
-router.get('/', controller.findAll);
-router.post('/', validate(createProjectSchema), controller.create);
-router.get('/:id', controller.findById);
-router.patch('/:id', validate(updateProjectSchema), controller.update);
-router.delete('/:id', authorize('ADMIN'), controller.delete);
-router.post('/:id/members', validate(addMemberSchema), controller.addMember);
-router.delete('/:id/members/:userId', controller.removeMember);
-router.get('/:id/stats', controller.getStats);
+router.get('/', asyncHandler(controller.findAll));
+router.post('/', validate(createProjectSchema), asyncHandler(controller.create));
+router.get('/:id', asyncHandler(controller.findById));
+router.patch('/:id', validate(updateProjectSchema), asyncHandler(controller.update));
+router.delete('/:id', authorize('ADMIN'), asyncHandler(controller.delete));
+router.post('/:id/members', validate(addMemberSchema), asyncHandler(controller.addMember));
+router.delete('/:id/members/:userId', asyncHandler(controller.removeMember));
+router.get('/:id/stats', asyncHandler(controller.getStats));
 
 export { router as projectsRoutes };

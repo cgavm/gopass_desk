@@ -1,8 +1,9 @@
 import { UserRole, ProjectStatus } from '@prisma/client';
+import { prisma } from '@infrastructure/database/prisma.client';
+import { logger } from '@shared/logger';
 import { ProjectsRepository } from './projects.repository';
 import { CreateProjectInput, UpdateProjectInput, AddMemberInput } from './projects.dto';
 import { ForbiddenError, NotFoundError, ConflictError } from '@shared/errors/AppError';
-import { prisma } from '@infrastructure/database/prisma.client';
 import { emitToAll } from '@infrastructure/sockets/socket.server';
 import { SOCKET_EVENTS } from '@infrastructure/sockets/socket.events';
 
@@ -14,7 +15,6 @@ const DEFAULT_STATUSES = [
   { name: 'BLOCKED', color: '#EF4444', order: 4, isDefault: false },
 ];
 
-// Minimal shape returned by ProjectsRepository.findById / findAll
 interface ProjectWithRelations {
   id: string;
   name: string;
@@ -27,30 +27,35 @@ interface ProjectWithRelations {
   [key: string]: unknown;
 }
 
-export class ProjectsService {
-  constructor(private readonly repository: ProjectsRepository) {}
+export type ProjectsService = ReturnType<typeof createProjectsService>;
 
-  // Issue #1: All users see all projects (global board, like JIRA)
-  async findAll(_userId: string, _userRole: UserRole): Promise<ProjectWithRelations[]> {
-    return this.repository.findAll() as Promise<ProjectWithRelations[]>;
-  }
+export const createProjectsService = (repository: ProjectsRepository) => ({
+  findAll: (_userId: string, _userRole: UserRole): Promise<ProjectWithRelations[]> =>
+    repository.findAll() as Promise<ProjectWithRelations[]>,
 
-  async findById(id: string, userId: string, userRole: UserRole): Promise<ProjectWithRelations> {
-    const project = await this.repository.findById(id) as ProjectWithRelations | null;
+  findById: async (
+    id: string,
+    userId: string,
+    userRole: UserRole
+  ): Promise<ProjectWithRelations> => {
+    const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
 
     const isOwner = project.ownerId === userId;
     const isMember = project.members.some((m) => m.userId === userId);
 
     if (userRole !== 'ADMIN' && !isOwner && !isMember) {
+      logger.warn({ projectId: id, userId }, 'Access denied to project');
       throw new ForbiddenError('Access denied to this project');
     }
 
     return project;
-  }
+  },
 
-  async create(userId: string, input: CreateProjectInput): Promise<ProjectWithRelations> {
-    // Use transaction to create project + default statuses + owner as member
+  create: async (
+    userId: string,
+    input: CreateProjectInput
+  ): Promise<ProjectWithRelations> => {
     const project = await prisma.$transaction(async (tx) => {
       const newProject = await tx.project.create({
         data: {
@@ -61,15 +66,10 @@ export class ProjectsService {
         },
       });
 
-      // Create default task statuses
       await tx.taskStatus.createMany({
-        data: DEFAULT_STATUSES.map((s) => ({
-          ...s,
-          projectId: newProject.id,
-        })),
+        data: DEFAULT_STATUSES.map((s) => ({ ...s, projectId: newProject.id })),
       });
 
-      // Add owner as member
       await tx.projectMember.create({
         data: { projectId: newProject.id, userId },
       });
@@ -77,83 +77,87 @@ export class ProjectsService {
       return newProject;
     });
 
-    const fullProject = await this.repository.findById(project.id) as ProjectWithRelations;
-
-    // Issue #3: Emit PROJECT_CREATED to all connected users so every dashboard updates in real-time
+    const fullProject = (await repository.findById(project.id)) as ProjectWithRelations;
+    logger.info({ projectId: project.id, userId }, 'Project created');
     emitToAll(SOCKET_EVENTS.PROJECT_CREATED, { project: fullProject });
-
     return fullProject;
-  }
+  },
 
-  async update(
+  update: async (
     id: string,
     userId: string,
     userRole: UserRole,
     input: UpdateProjectInput
-  ): Promise<ProjectWithRelations> {
-    const project = await this.repository.findById(id) as ProjectWithRelations | null;
+  ): Promise<ProjectWithRelations> => {
+    const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
 
     if (userRole !== 'ADMIN' && project.ownerId !== userId) {
+      logger.warn({ projectId: id, userId }, 'Unauthorized project update attempt');
       throw new ForbiddenError('Only owner or admin can update this project');
     }
 
-    return this.repository.update(id, input) as Promise<ProjectWithRelations>;
-  }
+    const updated = (await repository.update(id, input)) as unknown as ProjectWithRelations;
+    logger.info({ projectId: id, userId }, 'Project updated');
+    return updated;
+  },
 
-  async delete(id: string): Promise<void> {
-    const project = (await this.repository.findById(id)) as ProjectWithRelations | null;
+  delete: async (id: string): Promise<void> => {
+    const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
+    await repository.delete(id);
+    logger.info({ projectId: id }, 'Project deleted');
+  },
 
-    await this.repository.delete(id);
-  }
-
-  async addMember(
+  addMember: async (
     id: string,
     userId: string,
     userRole: UserRole,
     input: AddMemberInput
-  ): Promise<void> {
-    const project = await this.repository.findById(id) as ProjectWithRelations | null;
+  ): Promise<void> => {
+    const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
 
     if (userRole !== 'ADMIN' && project.ownerId !== userId) {
+      logger.warn({ projectId: id, userId }, 'Unauthorized member add attempt');
       throw new ForbiddenError('Only owner or admin can manage members');
     }
 
-    const isMember = await this.repository.isMember(id, input.userId);
-    if (isMember) {
-      throw new ConflictError('User is already a member of this project');
-    }
+    const isMember = await repository.isMember(id, input.userId);
+    if (isMember) throw new ConflictError('User is already a member of this project');
 
-    await this.repository.addMember(id, input.userId);
-  }
+    await repository.addMember(id, input.userId);
+    logger.info({ projectId: id, targetUserId: input.userId }, 'Member added to project');
+  },
 
-  async removeMember(
+  removeMember: async (
     id: string,
     memberUserId: string,
     userId: string,
     userRole: UserRole
-  ): Promise<void> {
-    const project = await this.repository.findById(id) as ProjectWithRelations | null;
+  ): Promise<void> => {
+    const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
 
     if (userRole !== 'ADMIN' && project.ownerId !== userId) {
+      logger.warn({ projectId: id, userId }, 'Unauthorized member remove attempt');
       throw new ForbiddenError('Only owner or admin can manage members');
     }
 
-    await this.repository.removeMember(id, memberUserId);
-  }
+    await repository.removeMember(id, memberUserId);
+    logger.info({ projectId: id, targetUserId: memberUserId }, 'Member removed from project');
+  },
 
-  async getStats(id: string, userId: string, userRole: UserRole) {
-    const project = await this.repository.findById(id) as ProjectWithRelations | null;
+  getStats: async (id: string, userId: string, userRole: UserRole) => {
+    const project = (await repository.findById(id)) as ProjectWithRelations | null;
     if (!project) throw new NotFoundError('Project not found');
 
     const isMember = project.members.some((m) => m.userId === userId);
     if (userRole !== 'ADMIN' && project.ownerId !== userId && !isMember) {
+      logger.warn({ projectId: id, userId }, 'Access denied to project stats');
       throw new ForbiddenError('Access denied');
     }
 
-    return this.repository.getTaskStats(id);
-  }
-}
+    return repository.getTaskStats(id);
+  },
+});
