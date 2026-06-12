@@ -56,41 +56,41 @@ GoPass Desk App is a project management too. It enables teams to:
 
 ---
 
-## Architecture
+```mermaid
+flowchart TB
 
-```
-                    +------------------+      +------------------+
-                    |   React (Vite)   |      |   shadcn/ui      |
-                    |   Zustand Store  |      |   Tailwind CSS   |
-                    +--------+---------+      +--------+---------+
-                             |                          |
-                             +------------+-------------+
-                                          |
-                                   HTTP / WebSocket
-                                          |
-                    +---------------------v----------------------+
-                    |            Express Server                   |
-                    |  +----------+  +----------+  +---------+  |
-                    |  |  Auth    |  | Projects |  |  Tasks  |  |
-                    |  |  Module  |  |  Module  |  | Module  |  |
-                    |  +----------+  +----------+  +---------+  |
-                    |  +----------+  +----------+  +---------+  |
-                    |  |  Users   |  | Statuses |  |  Admin  |  |
-                    |  |  Module  |  |  Module  |  | Module  |  |
-                    |  +----------+  +----------+  +---------+  |
-                     |  +----------+  +----------+  +---------+  |
-                     |  |Notifications|  |  AI    |  |Socket.IO|  |
-                     |  |  Module    |  | Module  |  | Server  |  |
-                     |  +----------+  +----------+  +---------+  |
-                     +---------------------+----------------------+
-                                           |              |
-                     +---------------------v---+    +-----v-----------+
-                     |   Prisma ORM (PostgreSQL)|    | Gemini 1.5 Flash|
-                     +---------------------+---+    | (Function Call) |
-                                           |        +-----------------+
-                     +---------------------v----------------------+
-                     |              Redis (Cache)                  |
-                     +--------------------------------------------+
+    Client["React + Vite<br/>Zustand<br/>Tailwind<br/>shadcn/ui"]
+
+    API["Express.js API Server"]
+
+    subgraph Services
+        Auth["Authentication"]
+        Users["Users"]
+        Projects["Projects"]
+        Tasks["Tasks"]
+        Status["Statuses"]
+        Notifications["Notifications"]
+        Admin["Administration"]
+        AI["AI Integration"]
+        Socket["Socket.IO"]
+    end
+
+    Prisma["Prisma ORM"]
+    PostgreSQL["PostgreSQL"]
+    Redis["Redis Cache"]
+
+    Gemini["Gemini 1.5 Flash"]
+
+    Client <-->|HTTPS / WebSocket| API
+
+    API --> Services
+
+    API --> Prisma
+    Prisma --> PostgreSQL
+
+    API --> Redis
+
+    AI --> Gemini
 ```
 
 ### Why Layered Architecture instead of NestJS?
@@ -203,8 +203,8 @@ docker-compose up -d
 >
 > Also, Redis is mapped to host port `6382` to avoid conflicts with any local Redis instance already using `6379`.
 
-## Backend API: http://localhost:3001
-## Default login: admin@gopass.desk / MySecurePassword123!
+### Backend API: http://localhost:3001
+### Default login: admin@gopass.desk / MySecurePassword123!
 
 ---
 
@@ -325,7 +325,7 @@ npm test
 | projects.service | Owner assignment, forbidden access, member deduplication |
 | tasks.service | History creation, task move, authorization, notifications |
 | users.service | Duplicate email, soft delete |
-
+```
 ---
 
 ## CI/CD
