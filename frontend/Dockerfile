@@ -1,7 +1,3 @@
-# ============================================
-# gopass_desk Frontend — Multi-stage Dockerfile
-# ============================================
-
 # ---- Development stage ----
 FROM node:20-alpine AS dev
 

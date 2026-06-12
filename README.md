@@ -1,4 +1,4 @@
-# gopass_desk
+# GoPass Desk App
 
 A full-stack project management application with Kanban board, real-time collaboration, role-based access control, and an AI-powered task assistant. Built as a senior-level technical challenge.
 
@@ -24,7 +24,7 @@ A full-stack project management application with Kanban board, real-time collabo
 
 ## Overview
 
-gopass_desk is a project management tool inspired by Jira/Trello. It enables teams to:
+GoPass Desk App is a project management tool inspired by Jira/Trello. It enables teams to:
 
 - Create and manage projects with configurable Kanban boards
 - Track tasks through customizable workflows
@@ -369,7 +369,7 @@ The GitHub Actions pipeline has 4 sequential jobs:
 
 ## AI Assistant
 
-gopass_desk includes a fully implemented conversational AI assistant that allows authenticated users to query their assigned tasks in natural language (Spanish).
+GoPass Desk App includes a fully implemented conversational AI assistant that allows authenticated users to query their assigned tasks in natural language (Spanish).
 
 ### Features
 - 💬 **Conversational** — Maintains conversation history within the session.

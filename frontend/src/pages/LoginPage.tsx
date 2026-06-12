@@ -37,9 +37,9 @@ export function LoginPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
             <FolderKanban className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">gopass_desk</CardTitle>
+          <CardTitle className="text-2xl">GoPass Desk App</CardTitle>
           <CardDescription>
-            Sign in to your account
+            Inicia sesión en tu cuenta
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -51,18 +51,18 @@ export function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@gopass.desk"
+                placeholder="email@gopass.ai"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Admin123!"
+                placeholder="********"
                 required
               />
             </div>

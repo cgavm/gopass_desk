@@ -35,7 +35,7 @@ export function Sidebar() {
     >
       <div className="flex h-16 items-center justify-between border-b px-4">
         {sidebarOpen && (
-          <span className="text-lg font-bold tracking-tight">gopass_desk</span>
+          <span className="text-lg font-bold tracking-tight">GoPass Desk App</span>
         )}
         <button
           onClick={toggleSidebar}
