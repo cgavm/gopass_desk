@@ -1,6 +1,6 @@
 # GoPass Desk App
 
-A full-stack project management application with Kanban board, real-time collaboration, role-based access control, and an AI-powered task assistant. Built as a senior-level technical challenge.
+A full-stack project management application with Kanban board, real-time collaboration, role-based access control, and an AI-powered task assistant.
 
 ---
 
@@ -24,36 +24,35 @@ A full-stack project management application with Kanban board, real-time collabo
 
 ## Overview
 
-GoPass Desk App is a project management tool inspired by Jira/Trello. It enables teams to:
+GoPass Desk App is a project management too. It enables teams to:
 
 - Create and manage projects with configurable Kanban boards
 - Track tasks through customizable workflows
 - Collaborate in real-time with live board updates
 - Receive instant notifications on task assignments, status changes, and comments
 - Manage users and permissions with fine-grained access control
-- **Query personal tasks in natural language** via an AI assistant powered by Google Gemini
 
 ---
 
 ## Tech Stack
 
-| Technology | Version | Justification |
+| Technology | Version
 |------------|---------|---------------|
-| Node.js | 20+ | LTS, native async/await, excellent TS support |
-| TypeScript | 5.4+ | Type safety, better DX, catches bugs at compile time |
-| Express | 4.18+ | Lightweight, battle-tested, flexible for layered architecture |
-| Prisma | 5.10+ | Type-safe ORM, excellent migrations, auto-generated queries |
-| PostgreSQL | 16 | ACID-compliant, JSONB support, proven at scale |
-| Redis | 7 | Token blacklisting, pub/sub for real-time features |
-| Socket.IO | 4.7+ | Bidirectional real-time, room-based broadcasting |
-| React | 18+ | Component model, hooks, ecosystem |
-| Vite | 5+ | Fast HMR, modern build tooling |
-| Tailwind CSS | 3.4+ | Utility-first, minimal CSS bundle, consistent design |
-| shadcn/ui | latest | Copy-paste components, Radix UI accessibility, zero runtime lock-in |
-| Zustand | 4+ | Minimal boilerplate, no providers needed, excellent TS support |
-| Zod | 3.22+ | Schema validation shared between frontend and backend |
-| Jest | 29+ | Industry standard, excellent mocking, coverage reports |
-| Google Gemini 1.5 Flash | latest | LLM for conversational task assistant with Function Calling |
+| Node.js | 20+
+| TypeScript | 5.4+ 
+| Express | 4.18+ 
+| Prisma | 5.10+ 
+| PostgreSQL | 16 
+| Redis | 7 
+| Socket.IO | 4.7+ 
+| React | 18+ 
+| Vite | 5+ 
+| Tailwind CSS | 3.4+ 
+| shadcn/ui | latest 
+| Zustand | 4+ 
+| Zod | 3.22+ 
+| Jest | 29+ 
+| Google Gemini 1.5 Flash | latest 
 
 ---
 
@@ -204,9 +203,8 @@ docker-compose up -d
 >
 > Also, Redis is mapped to host port `6382` to avoid conflicts with any local Redis instance already using `6379`.
 
-# Backend API: http://localhost:3001
-# Default login: admin@gopass.desk / MySecurePassword123!
-```
+## Backend API: http://localhost:3001
+## Default login: admin@gopass.desk / MySecurePassword123!
 
 ---
 
@@ -216,8 +214,8 @@ docker-compose up -d
 |----------|----------|-------------|---------|
 | DATABASE_URL | ✅ | PostgreSQL connection string | postgresql://user:pass@localhost:5432/gopass_desk |
 | REDIS_URL | ✅ | Redis connection string | redis://localhost:6379 |
-| JWT_ACCESS_SECRET | ✅ | Secret for access tokens | change_this_in_production |
-| JWT_REFRESH_SECRET | ✅ | Secret for refresh tokens | change_this_in_production_too |
+| JWT_ACCESS_SECRET | ✅ | Secret for access tokens 
+| JWT_REFRESH_SECRET | ✅ | Secret for refresh tokens 
 | JWT_ACCESS_EXPIRES_IN | ✅ | Access token TTL | 15m |
 | JWT_REFRESH_EXPIRES_IN | ✅ | Refresh token TTL | 7d |
 | PORT | ✅ | Backend port | 3001 |
@@ -319,9 +317,6 @@ docker-compose up -d
 cd backend
 npm test
 
-# Run in CI mode
-npm run test:ci
-```
 
 ### Coverage
 | Module | Tests |
@@ -372,66 +367,10 @@ The GitHub Actions pipeline has 4 sequential jobs:
 GoPass Desk App includes a fully implemented conversational AI assistant that allows authenticated users to query their assigned tasks in natural language (Spanish).
 
 ### Features
-- 💬 **Conversational** — Maintains conversation history within the session.
-- 🔒 **User-scoped** — Only returns data for the authenticated user; userId is always extracted from the JWT, never from the request body.
-- 🛠️ **Function Calling** — The model uses Gemini's native Function Calling to decide when to query the database, making responses accurate and grounded in real data.
-- 🌐 **Spanish-first** — The system prompt is in Spanish; the model maps colloquial terms ("revisión", "pendientes") to database status names automatically.
-- ❌ **Graceful degradation** — If `GEMINI_API_KEY` is not set or the SDK fails, the endpoint returns `503` and the UI shows a friendly message.
-- 🗑️ **Ephemeral** — Conversation history is stored only in client memory and destroyed when the chat panel is closed.
+- **Conversational** — Maintains conversation history within the session.
+- **User-scoped** — Only returns data for the authenticated user; userId is always extracted from the JWT, never from the request body.
+- **Function Calling** — The model uses Gemini's native Function Calling to decide when to query the database, making responses accurate and grounded in real data.
+- **Graceful degradation** — If `GEMINI_API_KEY` is not set or the SDK fails, the endpoint returns `503` and the UI shows a friendly message.
+- **Ephemeral** — Conversation history is stored only in client memory and destroyed when the chat panel is closed.
 
-### Architecture
-
-```
-frontend/src/
-  api/ai.api.ts              — Axios client for /ai/chat
-  store/chat.store.ts        — Zustand store (ephemeral history, loading, open/close)
-  components/chat/
-    ChatWidget.tsx            — Floating button + chat panel UI
-
-backend/src/infrastructure/ai/
-  ai.port.ts                 — IAIProvider interface (stable, no changes needed)
-  ai.provider.ts             — GeminiProvider: implements IAIProvider using @google/generative-ai
-  ai.tools.ts                — Function Calling tool declarations (get_my_tasks, get_upcoming_tasks, etc.)
-  ai.repository.ts           — User-scoped Prisma queries for the assistant
-  ai.module.ts               — Express router with agentic loop
-```
-
-### Agentic Loop Flow
-
-```
-Client  →  POST /api/v1/ai/chat  { messages }
-              │
-              ▼
-        authenticate middleware (extracts userId from JWT)
-              │
-              ▼
-        GeminiProvider.chat(messages, tools)
-              │
-              ├── Model returns tool call? ──YES──► AIRepository.getTasksForUser(userId)
-              │                                         │
-              │                                         └──► model.chat([...messages, tool_result])
-              │
-              └── Model returns text? ──────YES──► { reply: "..." }  →  Client
-```
-
-### Available Tools (Function Calling)
-
-| Tool | Description |
-|------|-------------|
-| `get_my_tasks` | All tasks assigned to the user |
-| `get_upcoming_tasks` | Tasks due within N days (default: 7) |
-| `get_tasks_by_status` | Tasks filtered by status name (partial, case-insensitive) |
-| `get_available_statuses` | Distinct status names across user's tasks |
-
-### Setup
-
-1. Obtain a Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. Add it to your environment:
-   ```bash
-   GEMINI_API_KEY=your_key_here
-   ```
-3. Restart the backend container.
-4. The chat button appears in the bottom-left corner of the application.
-
-> **Note:** If the key is not provided, the assistant fails gracefully — a friendly message is shown to the user and no errors are thrown in the backend logs.
 
