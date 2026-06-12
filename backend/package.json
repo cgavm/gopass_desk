@@ -61,6 +61,7 @@
     "jest-mock-extended": "^3.0.7",
     "prisma": "^5.10.0",
     "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.17",
     "tsx": "^4.7.1",
     "typescript": "^5.4.2"

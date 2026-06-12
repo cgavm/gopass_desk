@@ -1,5 +1,15 @@
 import { jest } from '@jest/globals';
-import { TasksService } from '@modules/tasks/tasks.service';
+import { prisma } from '@infrastructure/database/prisma.client';
+
+jest.mock('@infrastructure/database/prisma.client', () => ({
+  prisma: {
+    user: { findUnique: jest.fn(), findMany: jest.fn() },
+    taskStatus: { findUnique: jest.fn() },
+  },
+}));
+
+const mockedPrisma = prisma as any;
+import { createTasksService } from '@modules/tasks/tasks.service';
 import { TasksRepository } from '@modules/tasks/tasks.repository';
 import { NotificationsRepository } from '@modules/notifications/notifications.repository';
 import { ForbiddenError, NotFoundError } from '@shared/errors/AppError';
@@ -18,7 +28,7 @@ const mockTaskRepo = {
   addSubtask: jest.fn(),
   updateSubtask: jest.fn(),
   deleteSubtask: jest.fn(),
-} as unknown as TasksRepository;
+} as any;
 
 const mockNotifRepo = {
   findByUser: jest.fn(),
@@ -26,13 +36,16 @@ const mockNotifRepo = {
   create: jest.fn(),
   markAsRead: jest.fn(),
   markAllAsRead: jest.fn(),
-} as unknown as NotificationsRepository;
+} as any;
 
-const service = new TasksService(mockTaskRepo, mockNotifRepo);
+const service = createTasksService(mockTaskRepo, mockNotifRepo);
 
 describe('tasks.service', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    mockedPrisma.user.findUnique.mockResolvedValue({ name: 'Test User' });
+    mockedPrisma.user.findMany.mockResolvedValue([{ id: 'admin-1' }]);
+    mockedPrisma.taskStatus.findUnique.mockResolvedValue({ name: 'New Status' });
   });
 
   it('should create task history entry on create', async () => {
@@ -42,8 +55,8 @@ describe('tasks.service', () => {
       projectId: 'proj-1',
       assigneeId: null,
     };
-    (mockTaskRepo.create as jest.Mock).mockResolvedValue(task);
-    (mockTaskRepo.createHistory as jest.Mock).mockResolvedValue({});
+    (mockTaskRepo.create as any).mockResolvedValue(task);
+    (mockTaskRepo.createHistory as any).mockResolvedValue({});
 
     await service.create('proj-1', 'user-1', 'ADMIN', {
       title: 'Test',
@@ -68,9 +81,9 @@ describe('tasks.service', () => {
       title: 'Task',
       assigneeId: null,
     };
-    (mockTaskRepo.findById as jest.Mock).mockResolvedValue(existing);
-    (mockTaskRepo.move as jest.Mock).mockResolvedValue({});
-    (mockTaskRepo.createHistory as jest.Mock).mockResolvedValue({});
+    (mockTaskRepo.findById as any).mockResolvedValue(existing);
+    (mockTaskRepo.move as any).mockResolvedValue({});
+    (mockTaskRepo.createHistory as any).mockResolvedValue({});
 
     await service.move('task-1', 'user-1', 'ADMIN', {
       statusId: 'new-status',
@@ -95,10 +108,10 @@ describe('tasks.service', () => {
       reporterId: 'user-1',
       project: { ownerId: 'user-1' },
     };
-    (mockTaskRepo.findById as jest.Mock).mockResolvedValue(existing);
-    (mockTaskRepo.move as jest.Mock).mockResolvedValue({});
-    (mockTaskRepo.createHistory as jest.Mock).mockResolvedValue({});
-    (mockNotifRepo.create as jest.Mock).mockResolvedValue({ id: 'notif-1' });
+    (mockTaskRepo.findById as any).mockResolvedValue(existing);
+    (mockTaskRepo.move as any).mockResolvedValue({});
+    (mockTaskRepo.createHistory as any).mockResolvedValue({});
+    (mockNotifRepo.create as any).mockResolvedValue({ id: 'notif-1' });
 
     await service.move('task-1', 'user-1', 'ADMIN', {
       statusId: 'new-status',
@@ -118,12 +131,55 @@ describe('tasks.service', () => {
       project: { ownerId: 'user-1' },
     };
     const comment = { id: 'comment-1', content: 'Hello' };
-    (mockTaskRepo.findById as jest.Mock).mockResolvedValue(task);
-    (mockTaskRepo.addComment as jest.Mock).mockResolvedValue(comment);
-    (mockNotifRepo.create as jest.Mock).mockResolvedValue({ id: 'notif-1' });
+    (mockTaskRepo.findById as any).mockResolvedValue(task);
+    (mockTaskRepo.addComment as any).mockResolvedValue(comment);
+    (mockNotifRepo.create as any).mockResolvedValue({ id: 'notif-1' });
 
     await service.addComment('task-1', 'user-3', { content: 'Hello' });
 
-    expect(mockNotifRepo.create).toHaveBeenCalledTimes(2);
+    expect(mockNotifRepo.create).toHaveBeenCalledTimes(3);
+  });
+  it('should find by project', async () => {
+    (mockTaskRepo.findByProject as any).mockResolvedValue([{ id: '1' }]);
+    const res = await service.findByProject('proj-1', 'user-1', 'ADMIN');
+    expect(res).toHaveLength(1);
+  });
+
+  it('should find by id', async () => {
+    (mockTaskRepo.findById as any).mockResolvedValue({ id: '1' });
+    const res = await service.findById('1', 'user-1', 'ADMIN');
+    expect(res.id).toBe('1');
+  });
+
+  it('should get comments', async () => {
+    (mockTaskRepo.getComments as any).mockResolvedValue([{ id: 'c1' }]);
+    const res = await service.getComments('1');
+    expect(res).toHaveLength(1);
+  });
+
+  it('should add subtask', async () => {
+    (mockTaskRepo.findById as any).mockResolvedValue({ id: '1', title: 'Task' });
+    (mockTaskRepo.addSubtask as any).mockResolvedValue({ id: 's1' });
+    const res = await service.addSubtask('1', 'user-1', { title: 'Sub' });
+    expect(res.id).toBe('s1');
+  });
+
+  it('should update subtask', async () => {
+    (mockTaskRepo.updateSubtask as any).mockResolvedValue({ id: 's1' });
+    await service.updateSubtask('1', 's1', { title: 'Sub2' });
+    expect(mockTaskRepo.updateSubtask).toHaveBeenCalled();
+  });
+
+  it('should delete subtask', async () => {
+    (mockTaskRepo.deleteSubtask as any).mockResolvedValue({});
+    await service.deleteSubtask('1', 's1');
+    expect(mockTaskRepo.deleteSubtask).toHaveBeenCalled();
+  });
+
+  it('should update task', async () => {
+    (mockTaskRepo.findById as any).mockResolvedValue({ id: '1', title: 'Task' });
+    (mockTaskRepo.update as any).mockResolvedValue({ id: '1', title: 'Task2' });
+    const res = await service.update('1', 'user-1', 'ADMIN', { title: 'Task2' });
+    expect(res.title).toBe('Task2');
   });
 });

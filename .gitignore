@@ -5,3 +5,5 @@ config.json
 .DS_Store
 .env
 .scannerwork
+coverage
+dist
