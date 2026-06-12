@@ -1,17 +1,5 @@
 import Redis from 'ioredis';
-import pino from 'pino';
-
-export const logger = pino({
-  level: process.env.LOG_LEVEL ?? 'info',
-  redact: {
-    paths: ['*.email', '*.name', 'password', '*.password', '*.passwordHash'],
-    remove: true,
-  },
-  transport:
-    process.env.NODE_ENV === 'development'
-      ? { target: 'pino-pretty', options: { colorize: true } }
-      : undefined,
-});
+import { logger } from '@shared/logger';
 
 const globalForRedis = globalThis as unknown as {
   redis: Redis | undefined;
@@ -36,17 +24,16 @@ redis.on('connect', () => {
   logger.info('Redis connected');
 });
 
-// Refresh token blacklist helpers
 const BLACKLIST_PREFIX = 'bl:';
 
-export async function blacklistToken(
+export const blacklistToken = async (
   jti: string,
   ttlSeconds: number
-): Promise<void> {
+): Promise<void> => {
   await redis.setex(`${BLACKLIST_PREFIX}${jti}`, ttlSeconds, '1');
-}
+};
 
-export async function isTokenBlacklisted(jti: string): Promise<boolean> {
+export const isTokenBlacklisted = async (jti: string): Promise<boolean> => {
   const result = await redis.get(`${BLACKLIST_PREFIX}${jti}`);
   return result === '1';
-}
+};
