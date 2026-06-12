@@ -1,17 +1,9 @@
 import { NotificationsRepository } from './notifications.repository';
 
-export class NotificationsService {
-  constructor(private readonly repository: NotificationsRepository) {}
+export type NotificationsService = ReturnType<typeof createNotificationsService>;
 
-  async findByUser(userId: string) {
-    return this.repository.findByUser(userId);
-  }
-
-  async markAsRead(id: string, userId: string) {
-    return this.repository.markAsRead(id, userId);
-  }
-
-  async markAllAsRead(userId: string) {
-    return this.repository.markAllAsRead(userId);
-  }
-}
+export const createNotificationsService = (repository: NotificationsRepository) => ({
+  findByUser: (userId: string) => repository.findByUser(userId),
+  markAsRead: (id: string, userId: string) => repository.markAsRead(id, userId),
+  markAllAsRead: (userId: string) => repository.markAllAsRead(userId),
+});

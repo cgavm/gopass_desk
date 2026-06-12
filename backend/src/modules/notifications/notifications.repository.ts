@@ -6,44 +6,23 @@ interface CreateNotificationInput {
   payload: Prisma.InputJsonValue;
 }
 
-export class NotificationsRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export type NotificationsRepository = ReturnType<typeof createNotificationsRepository>;
 
-  async findByUser(userId: string) {
-    return this.prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+export const createNotificationsRepository = (prisma: PrismaClient) => ({
+  findByUser: (userId: string) =>
+    prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } }),
 
-  async findUnreadByUser(userId: string) {
-    return this.prisma.notification.findMany({
-      where: { userId, isRead: false },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+  findUnreadByUser: (userId: string) =>
+    prisma.notification.findMany({ where: { userId, isRead: false }, orderBy: { createdAt: 'desc' } }),
 
-  async create(input: CreateNotificationInput) {
-    return this.prisma.notification.create({
-      data: {
-        userId: input.userId,
-        type: input.type,
-        payload: input.payload,
-      },
-    });
-  }
+  create: (input: CreateNotificationInput) =>
+    prisma.notification.create({
+      data: { userId: input.userId, type: input.type, payload: input.payload },
+    }),
 
-  async markAsRead(id: string, userId: string) {
-    return this.prisma.notification.update({
-      where: { id, userId },
-      data: { isRead: true },
-    });
-  }
+  markAsRead: (id: string, userId: string) =>
+    prisma.notification.update({ where: { id, userId }, data: { isRead: true } }),
 
-  async markAllAsRead(userId: string) {
-    return this.prisma.notification.updateMany({
-      where: { userId, isRead: false },
-      data: { isRead: true },
-    });
-  }
-}
+  markAllAsRead: (userId: string) =>
+    prisma.notification.updateMany({ where: { userId, isRead: false }, data: { isRead: true } }),
+});
