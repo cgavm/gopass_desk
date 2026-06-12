@@ -3,10 +3,10 @@ import { createServer } from 'http';
 import { z } from 'zod';
 import app from './app';
 import { prisma } from '@infrastructure/database/prisma.client';
-import { redis, logger } from '@infrastructure/cache/redis.client';
+import { logger } from '@shared/logger';
+import { redis } from '@infrastructure/cache/redis.client';
 import { initializeSocket } from '@infrastructure/sockets/socket.server';
 
-// Environment validation
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
@@ -27,7 +27,7 @@ if (!env.success) {
   process.exit(1);
 }
 
-const PORT = env.data!.PORT;
+const PORT = env.data.PORT;
 
 async function bootstrap(): Promise<void> {
   try {
@@ -56,19 +56,23 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-bootstrap();
+void bootstrap();
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  await prisma.$disconnect();
-  await redis.quit();
-  process.exit(0);
+process.on('SIGTERM', () => {
+  void (async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    await prisma.$disconnect();
+    await redis.quit();
+    process.exit(0);
+  })();
 });
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  await prisma.$disconnect();
-  await redis.quit();
-  process.exit(0);
+process.on('SIGINT', () => {
+  void (async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    await prisma.$disconnect();
+    await redis.quit();
+    process.exit(0);
+  })();
 });

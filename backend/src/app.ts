@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
 import { authRoutes } from '@modules/auth/auth.routes';
 import { usersRoutes } from '@modules/users/users.routes';
 import { projectsRoutes } from '@modules/projects/projects.routes';
@@ -13,10 +14,10 @@ import { aiRoutes } from '@infrastructure/ai/ai.module';
 import { errorHandler, notFoundHandler } from '@shared/middlewares/errorHandler.middleware';
 import { requestLogger } from '@shared/middlewares/requestLogger.middleware';
 import { globalRateLimiter } from '@shared/middlewares/rateLimiter.middleware';
+import { swaggerSpec } from '@infrastructure/swagger/swagger';
 
 const app = express();
 
-// Security middlewares
 app.use(helmet());
 app.use(
   cors({
@@ -29,7 +30,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(requestLogger);
 app.use(globalRateLimiter);
 
-// API routes
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+}
+
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/projects', projectsRoutes);
@@ -40,12 +44,10 @@ app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/ai', aiRoutes);
 
-// Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Error handling
 app.use(notFoundHandler);
 app.use(errorHandler);
 
