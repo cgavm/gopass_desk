@@ -113,16 +113,16 @@ export function ProjectsPage() {
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-1 h-4 w-4" />
-              New Project
+              Nuevo Proyecto
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Project</DialogTitle>
+              <DialogTitle>Crear Proyecto</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Name *</Label>
+                <Label>Nombre *</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -130,7 +130,7 @@ export function ProjectsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>Descripción</Label>
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -139,13 +139,13 @@ export function ProjectsPage() {
               </div>
               <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  Cancelar
                 </Button>
                 <Button
                   onClick={handleCreate}
                   disabled={creating || !name.trim()}
                 >
-                  Create
+                  Crear
                 </Button>
               </div>
             </div>
