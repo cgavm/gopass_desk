@@ -1,17 +1,3 @@
-/**
- * AI Provider — Gemini implementation of the IAIProvider interface.
- *
- * Structured as pure functions following the functional programming pattern
- * used throughout this codebase:
- *   - createGeminiModel()  → factory that reads env and returns a GenerativeModel
- *   - chat()               → pure async function, stateless, side-effect-free
- *   - splitMessages()      → pure transformation helper
- *   - buildSystemInstruction() → pure string builder
- *
- * No class, no constructor injection — the model is created once at module
- * registration time and passed explicitly where needed.
- */
-
 import {
   GoogleGenerativeAI,
   GenerativeModel,
@@ -24,12 +10,8 @@ import {
 } from '@google/generative-ai';
 import { AIMessage, AIResponse } from './ai.port';
 
-// ---------------------------------------------------------------------------
-// System instruction (pure string builder)
-// ---------------------------------------------------------------------------
-
 function buildSystemInstruction(): string {
-  return `Eres un asistente de gestión de tareas para la aplicación GoPass Desk App.
+  return `Eres un asistente de gestión de tareas para la aplicación gopass_desk.
 
 Tu único propósito es responder preguntas sobre las TAREAS ASIGNADAS al usuario que está preguntando.
 Nunca accedes ni mencionas datos de otros usuarios.
@@ -52,10 +34,6 @@ MAPEO DE ESTADOS (español → término de búsqueda):
 Si no conoces el estado exacto, llama a get_available_statuses primero.`;
 }
 
-// ---------------------------------------------------------------------------
-// Message splitter (pure transformation)
-// ---------------------------------------------------------------------------
-
 function splitMessages(messages: AIMessage[]): {
   history: Content[];
   lastUserMessage: string;
@@ -77,15 +55,6 @@ function splitMessages(messages: AIMessage[]): {
   return { history, lastUserMessage: last?.content ?? '' };
 }
 
-// ---------------------------------------------------------------------------
-// Factory — reads GEMINI_API_KEY from env, throws if absent
-// ---------------------------------------------------------------------------
-
-/**
- * Creates and returns a configured Gemini GenerativeModel.
- * Throws an Error if GEMINI_API_KEY is not set, causing the module to
- * fail fast and return 503 to the client.
- */
 export function createGeminiModel(): GenerativeModel {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {

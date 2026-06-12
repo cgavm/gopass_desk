@@ -1,10 +1,3 @@
-/**
- * AI Controller — HTTP layer only.
- *
- * Validates the request body and delegates to the service.
- * Does not contain any business logic or data access.
- */
-
 import { Request, Response, NextFunction } from 'express';
 import { GenerativeModel } from '@google/generative-ai';
 import { PrismaClient } from '@prisma/client';
@@ -24,13 +17,46 @@ const chatBodySchema = z.object({
     .max(50),
 });
 
-export class AIController {
-  constructor(
-    private readonly model: GenerativeModel | null,
-    private readonly prisma: PrismaClient
-  ) {}
-
-  chat = async (
+export const createAIController = (
+  model: GenerativeModel | null,
+  prisma: PrismaClient
+) => ({
+  /**
+   * @openapi
+   * /ai/chat:
+   *   post:
+   *     tags: [AI]
+   *     summary: Chat with the AI assistant
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [messages]
+   *             properties:
+   *               messages:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   required: [role, content]
+   *                   properties:
+   *                     role:
+   *                       type: string
+   *                       enum: [user, assistant]
+   *                     content:
+   *                       type: string
+   *     responses:
+   *       200:
+   *         description: AI reply
+   *       400:
+   *         description: Invalid messages format
+   *       503:
+   *         description: AI service unavailable
+   */
+  chat: async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -48,8 +74,8 @@ export class AIController {
 
     try {
       const result = await runChat(
-        this.model,
-        this.prisma,
+        model,
+        prisma,
         req.user!.id,
         parsed.data.messages as AIMessage[]
       );
@@ -73,5 +99,5 @@ export class AIController {
         })
       );
     }
-  };
-}
+  },
+});

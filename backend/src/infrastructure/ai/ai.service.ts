@@ -1,15 +1,3 @@
-/**
- * AI Service — orchestrates the agentic loop between the Gemini provider
- * and the repository functions.
- *
- * Responsibilities (SRP):
- *   - Validate that the provider is available
- *   - Manage the agentic loop (model ↔ tool execution)
- *   - Route tool calls to the correct repository function
- *
- * Does NOT handle HTTP concerns — that belongs in the controller.
- */
-
 import { GenerativeModel } from '@google/generative-ai';
 import { PrismaClient } from '@prisma/client';
 import { AIMessage } from './ai.port';
@@ -25,10 +13,6 @@ import {
 const MAX_TOOL_ITERATIONS = 3;
 const SERVICE_UNAVAILABLE_MESSAGE =
   'El asistente de IA no está disponible en este momento. Por favor, intenta más tarde.';
-
-// ---------------------------------------------------------------------------
-// Tool executor (pure function — maps a tool call to a repository call)
-// ---------------------------------------------------------------------------
 
 async function executeTool(
   name: ToolName,
@@ -71,10 +55,6 @@ async function executeTool(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Agentic loop
-// ---------------------------------------------------------------------------
-
 export interface ChatResult {
   ok: true;
   reply: string;
@@ -85,10 +65,6 @@ export interface ChatError {
   message: string;
 }
 
-/**
- * Runs the agentic loop: calls the model, executes any requested tool,
- * then calls the model again with the result until it returns plain text.
- */
 export async function runChat(
   model: GenerativeModel | null,
   prisma: PrismaClient,

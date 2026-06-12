@@ -1,12 +1,3 @@
-/**
- * AI Tool Declarations — Function Calling definitions for the Gemini model.
- *
- * Uses the SDK's native `FunctionDeclaration` type directly so the provider
- * can forward them to Gemini without any type conversion or casting.
- *
- * Tool naming follows Google's recommended snake_case convention.
- */
-
 import {
   FunctionDeclaration,
   FunctionDeclarationSchema,
