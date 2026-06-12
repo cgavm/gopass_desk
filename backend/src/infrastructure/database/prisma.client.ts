@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { logger } from '../cache/redis.client';
+
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
